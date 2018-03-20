@@ -2,7 +2,9 @@
 
 source("http://bioconductor.org/biocLite.R")
 biocLite("Biostrings")
-install.packages("devtools", "dplyr", "taxize")
+install.packages("devtools")
+install.packages("dplyr")
+install.packages("taxize")
 library("devtools")
 install_github("mhahsler/rBLAST")
 
@@ -15,8 +17,8 @@ library("Biostrings")
 library("rBLAST")
 # Check if blast is in PATH.
 Sys.which("blastn")
-library("dplyr", lib.loc = "C:/Program Files/R/R-3.4.4/library")
-library("taxize", lib.loc = "C:/Program Files/R/R-3.4.4/library")
+library("dplyr")
+library("taxize")
 # set NCBI's entrez api key
 Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
 # Check that key variable is in path.
@@ -29,16 +31,17 @@ getkey(service = "entrez")
 ############ Load required data ############
 
 # Extract reference database if not done already.
-untar("C:/Users/marce/Desktop/16SMicrobial.tar.gz", exdir = "16SMicrobialDB")
+download.file("ftp://ftp.ncbi.nlm.nih.gov/blast/db/16SMicrobial.tar.gz", "16SMicrobial.tar.gz", mode = 'wb')
+untar("16SMicrobial.tar.gz", exdir = "16SMicrobialDB")
 # Load reference database.
 microbial_database <- blast(db = "./16SMicrobialDB/16SMicrobial")
 # Check database
 microbial_database
 # Load taxonomy table to be updated with NCBI's taxonomy.
-tax_table <- read.table("C:/Users/marce/Desktop/taxonomy.tsv", sep = "\t", header = TRUE)
+tax_table <- read.table("C:/Users/marce/OneDrive/update-tax/taxonomy.tsv", sep = "\t", header = TRUE)
 tax_table
 # Load sequences to be analyzed. Ids corresponding to taxonomy OTUs.
-data_fasta <- readDNAStringSet("C:/Users/marce/Desktop/dna-sequences.fasta")
+data_fasta <- readDNAStringSet("C:/Users/marce/OneDrive/update-tax/dna-sequences.fasta")
 # Check fasta sequences
 data_fasta
 
@@ -52,7 +55,13 @@ new_tax2 <- tax2
 new_tax2$Taxon <- as.character(new_tax2$Taxon)
 new_tax2
 
-############ Function for parsing the NCBI's taxonomy into greegngenes format ############
+############ Function for determining if original greengenes taxonomy is incomplete. Returns boolean TRUE if taxonomy is incomplete. ############
+
+is_taxonomy_incomplete <- function(taxonomy) {
+    return(TRUE)
+}
+
+############ Function for parsing the NCBI's taxonomy into greegngenes format. Returns string of taxonomy in greengenes format. ############
 
 parse_ncbi_to_gg <- function(ncbi_tax) {
     return(sprintf("k__%s; p__%s; c__%s; o__%s; f__%s; g__%s; s__%s",
@@ -72,59 +81,26 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
            strsplit(filter(ncbi_tax[[1]], rank == "species")[1, 1], " ")[[1]][2]))
 }
 
-############ Function for parsing the NCBI's taxonomy into greegngenes format ############
 
-is_taxonomy_complete <- function(taxonomy) {
-    print("true")
-    return(TRUE)
+############ Function for blasting sequences agains microbial refseq 16s database and returning the taxonomy from NCBI's taxonomy database. ############
+############ Returns vector of size 3 including: bool if % indentity is at least given number, def. 97; float of blast result's % identity; taxonomy in ncbi's format ############
+
+blast_n_get_ncbi_tax <- function(seq, perc_ident = 97) {
+    blast_result <- arrange(predict(microbial_database, seq), desc(Bits), desc(Perc.Ident))[1,]
+    return(c((blast_result["Perc.Ident"] >= perc_ident), (blast_result["Perc.Ident"]), (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]), db = "ncbi"))))
 }
-
-############ Function for blasting sequences, retrieving taxonomy from NCBI taxonomy database and replacing an old taxonomy with the NCBI's taxonomy ############
-
-blast_and_replace <- function(seq) {
-    seq_id <- seq@ranges@NAMES[1]
-    seq_taxonomy <- as.character((new_tax2 %>% filter(Feature.ID == seq_id) %>% select(Taxon))[1, 1])
-    print(seq_id)
-    print(seq_taxonomy)
-    # If original taxonomy is incomplete.
-    if (is_taxonomy_complete(seq_taxonomy)) {
-        print("blasting")
-        blast_result <- arrange(predict(microbial_database, seq), desc(Perc.Ident), desc(Bits), E)[1,]["SubjectID"]
-        print(blast_result)
-        ncbi_tax_classification <- classification(genbank2uid(id = blast_result[1, 1]), db = "ncbi")
-        print(ncbi_tax_classification)
-        print(parse_ncbi_to_gg(ncbi_tax_classification))
-        new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(ncbi_tax_classification)))
-    }
-}
-
-data_small[1,]
-
-blast_and_replace(data_small[1,])
-
-
-new_tax2
-
-tax2$Taxon <- as.character(tax2$Taxon)
-new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == "4fdb872697ff4712d1408c2a31c881ef"), "caca_caca"))
-
-new_tax2
-
-blast_result2 <- arrange(predict(microbial_database, data_small[1,]), desc(Perc.Ident), desc(Bits), E)[1,]["SubjectID"]
-
-predict(microbial_database, data_small[1,])
-
-
-s
-
-
-
-
-
-
-
-
 
 for (i in 1:length(data_small)) {
-    blast_and_replace(data_small[i,])
+    current_sequence <- data_small[i,]
+    seq_id <- current_sequence@ranges@NAMES[1]
+    current_seq_taxonomy <- as.character((new_tax2 %>% filter(Feature.ID == seq_id) %>% select(Taxon))[1, 1])
+    if (is_taxonomy_incomplete(current_seq_taxonomy)) {
+        new_ncbi_taxonomy = blast_n_get_ncbi_tax(current_sequence, 97)
+        print(new_ncbi_taxonomy)
+
+        new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[3])))
+
+        print("add")
+        new_tax2 <- new_tax2 %>% mutate(Confidence = replace(Confidence, which(Feature.ID == seq_id), (new_ncbi_taxonomy[2])))
+    }  
 }
