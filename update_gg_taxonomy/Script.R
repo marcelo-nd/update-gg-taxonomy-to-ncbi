@@ -38,20 +38,15 @@ microbial_database <- blast(db = "./16SMicrobialDB/16SMicrobial")
 # Check database
 microbial_database
 # Load taxonomy table to be updated with NCBI's taxonomy.
-tax_table <- read.table("C:/Users/marce/OneDrive/update-tax/taxonomy.tsv", sep = "\t", header = TRUE)
+tax_table <- read.table("D:/3_Other_Files/OneDrive/update-tax/taxonomy.tsv", sep = "\t", header = TRUE)
 tax_table
 # Load sequences to be analyzed. Ids corresponding to taxonomy OTUs.
-data_fasta <- readDNAStringSet("C:/Users/marce/OneDrive/update-tax/dna-sequences.fasta")
+data_fasta <- readDNAStringSet("D:/3_Other_Files/OneDrive/update-tax/dna-sequences.fasta")
 # Check fasta sequences
 data_fasta
 
-data_small <- head(data_fasta, 3)
-data_small
-
-tax2 <- head(tax_table, 3)
-tax2
-
-new_tax2 <- tax2
+# This is the copy of tax file that we are modifying.
+new_tax2 <- tax_table
 new_tax2$Taxon <- as.character(new_tax2$Taxon)
 new_tax2
 
@@ -90,17 +85,33 @@ blast_n_get_ncbi_tax <- function(seq, perc_ident = 97) {
     return(c((blast_result["Perc.Ident"] >= perc_ident), (blast_result["Perc.Ident"]), (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]), db = "ncbi"))))
 }
 
-for (i in 1:length(data_small)) {
-    current_sequence <- data_small[i,]
+
+############ MAIN ############
+
+for (i in 1:length(data_fasta)) {
+    print(sprintf("OTU: %s / %s", i, length(data_fasta)))
+    # Get current sequence info from fasta file.
+    current_sequence <- data_fasta[i,]
+    # Get the OTU id from fasta.
     seq_id <- current_sequence@ranges@NAMES[1]
+    # Get the current taxonomy for current OTU
     current_seq_taxonomy <- as.character((new_tax2 %>% filter(Feature.ID == seq_id) %>% select(Taxon))[1, 1])
+    # If current taxonomy is incomplete, update
     if (is_taxonomy_incomplete(current_seq_taxonomy)) {
+        # Blast and get new taxonomy from ncbi
         new_ncbi_taxonomy = blast_n_get_ncbi_tax(current_sequence, 97)
-        print(new_ncbi_taxonomy)
-
-        new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[3])))
-
-        print("add")
-        new_tax2 <- new_tax2 %>% mutate(Confidence = replace(Confidence, which(Feature.ID == seq_id), (new_ncbi_taxonomy[2])))
-    }  
+        # If ident. perc is above specified.
+        if (new_ncbi_taxonomy[[1]]) {
+            # Replace taxonomy and ident. perc.
+            new_tax2 <- new_tax2 %>% mutate(Confidence = replace(Confidence, which(Feature.ID == seq_id), (new_ncbi_taxonomy[2])))
+            new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[3])))
+        }
+    }
+    # Wait 0.2 seconds to prevent ncbi's server to stop the process.
+    Sys.sleep(0.2)
 }
+
+# To do:
+# Tests for individual functions.
+# Turn main into a callable function.
+# aAdd flexibility for choosing taxonomic level of analyses.
