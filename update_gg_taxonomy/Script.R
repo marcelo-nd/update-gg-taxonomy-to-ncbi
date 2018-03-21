@@ -53,7 +53,8 @@ new_tax2
 ############ Function for determining if original greengenes taxonomy is incomplete. Returns boolean TRUE if taxonomy is incomplete. ############
 
 is_taxonomy_incomplete <- function(taxonomy) {
-    return(TRUE)
+    str_splt <- strsplit(taxonomy, ";")
+    return(length(str_splt[[1]]) < 7 || length(strsplit(str_splt[[1]][7], "__")[[1]]) < 2)
 }
 
 ############ Function for parsing the NCBI's taxonomy into greegngenes format. Returns string of taxonomy in greengenes format. ############
@@ -92,7 +93,7 @@ for (i in 1:length(data_fasta)) {
     print(sprintf("OTU: %s / %s", i, length(data_fasta)))
     # Get current sequence info from fasta file.
     current_sequence <- data_fasta[i,]
-    # Get the OTU id from fasta.
+    # Get the OTU id from fasta file.
     seq_id <- current_sequence@ranges@NAMES[1]
     # Get the current taxonomy for current OTU
     current_seq_taxonomy <- as.character((new_tax2 %>% filter(Feature.ID == seq_id) %>% select(Taxon))[1, 1])
@@ -113,5 +114,5 @@ for (i in 1:length(data_fasta)) {
 
 # To do:
 # Tests for individual functions.
-# Turn main into a callable function.
-# aAdd flexibility for choosing taxonomic level of analyses.
+# Turn main into a function.
+# Add flexibility for choosing taxonomic level of analyses.
