@@ -38,10 +38,10 @@ microbial_database <- blast(db = "./16SMicrobialDB/16SMicrobial")
 # Check database
 microbial_database
 # Load taxonomy table to be updated with NCBI's taxonomy.
-tax_table <- read.table("D:/3_Other_Files/OneDrive/update-tax/taxonomy.tsv", sep = "\t", header = TRUE)
+tax_table <- read.table("C:/Users/marce/OneDrive/update-tax/taxonomy.tsv", sep = "\t", header = TRUE)
 tax_table
 # Load sequences to be analyzed. Ids corresponding to taxonomy OTUs.
-data_fasta <- readDNAStringSet("D:/3_Other_Files/OneDrive/update-tax/dna-sequences.fasta")
+data_fasta <- readDNAStringSet("C:/Users/marce/OneDrive/update-tax/dna-sequences.fasta")
 # Check fasta sequences
 data_fasta
 
@@ -54,7 +54,12 @@ new_tax2
 
 is_taxonomy_incomplete <- function(taxonomy) {
     str_splt <- strsplit(taxonomy, ";")
-    return(length(str_splt[[1]]) < 7 || length(strsplit(str_splt[[1]][7], "__")[[1]]) < 2)
+    # Species level
+    #return(length(str_splt[[1]]) < 7 || length(strsplit(str_splt[[1]][7], "__")[[1]]) < 2)
+    # Genus level
+    #return(length(str_splt[[1]]) < 6 || length(strsplit(str_splt[[1]][6], "__")[[1]]) < 2)
+    # Family
+    return(length(str_splt[[1]]) < 5 || length(strsplit(str_splt[[1]][5], "__")[[1]]) < 2)
 }
 
 ############ Function for parsing the NCBI's taxonomy into greegngenes format. Returns string of taxonomy in greengenes format. ############
@@ -100,7 +105,7 @@ for (i in 1:length(data_fasta)) {
     # If current taxonomy is incomplete, update
     if (is_taxonomy_incomplete(current_seq_taxonomy)) {
         # Blast and get new taxonomy from ncbi
-        new_ncbi_taxonomy = blast_n_get_ncbi_tax(current_sequence, 97)
+        new_ncbi_taxonomy = blast_n_get_ncbi_tax(current_sequence, 90)
         # If ident. perc is above specified.
         if (new_ncbi_taxonomy[[1]]) {
             # Replace taxonomy and ident. perc.
@@ -112,7 +117,11 @@ for (i in 1:length(data_fasta)) {
     Sys.sleep(0.2)
 }
 
+new_tax3 <- apply(new_tax2, 2, as.character)
+
+write.table(new_tax3, file = "./taxonomy_updated_family.tsv", sep = "\t", row.names = FALSE)
+
 # To do:
 # Tests for individual functions.
 # Turn main into a function.
-# Add flexibility for choosing taxonomic level of analyses.
+# Add flexibility for choosing the taxonomic level of analyses.
