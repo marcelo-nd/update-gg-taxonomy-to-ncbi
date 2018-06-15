@@ -35,10 +35,11 @@ microbial_database <- blast(db = "./16SMicrobialDB/16SMicrobial")
 # Check database
 microbial_database
 # Load taxonomy table to be updated with NCBI's taxonomy.
-tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/hidro_agave_diversidad/2_resultados/9_tsv_gg_sk/taxonomy.tsv", sep = "\t", header = TRUE)
+#tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/hidro_agave_diversidad/2_resultados/9_tsv_gg_sk/taxonomy.tsv", sep = "\t", header = TRUE)
+tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/picrust_analyses_13_8/17_picrust_tsv_gg_13_8/taxonomy.tsv", sep = "\t", header = TRUE)
 tax_table
 # Load sequences to be analyzed. Ids corresponding to taxonomy OTUs.
-data_fasta <- readDNAStringSet("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/hidro_agave_diversidad/2_resultados/5_vsearch_output/clustered_sequences/63c3ed95-10da-4b24-bffb-c2aa4bb70cf3/data/dna-sequences.fasta")
+data_fasta <- readDNAStringSet("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/picrust_analyses/14_closedRef_forPICRUSt_13_8/dna-sequences.fasta")
 # Check fasta sequences
 data_fasta
 
@@ -118,7 +119,7 @@ new_tax3 <- apply(new_tax2, 2, as.character)
 
 new_tax3
 
-write.table(new_tax, file = "./taxonomy_updated__fungi_species.tsv", sep = "\t", row.names = FALSE)
+write.table(new_tax3, file = "./taxonomy_updated_picrust_13_8.tsv", sep = "\t", row.names = FALSE)
 
 # To do:
 # Tests for individual functions.
