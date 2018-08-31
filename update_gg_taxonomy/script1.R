@@ -9,8 +9,6 @@ library("devtools")
 install_github("mhahsler/rBLAST")
 
 
-
-
 ############ Load required packages ############
 
 library("Biostrings")

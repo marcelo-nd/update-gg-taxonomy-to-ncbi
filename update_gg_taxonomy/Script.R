@@ -1,21 +1,37 @@
-############ Install required packages ############
+# Install and load required packages
 
+# Bioconductor Packages
 source("http://bioconductor.org/biocLite.R")
-biocLite("Biostrings")
-install.packages("devtools")
-install.packages("dplyr")
-install.packages("taxize")
-library("devtools")
-install_github("mhahsler/rBLAST")
-
-############ Load required packages ############
-
+if (!"Biostrings" %in% installed.packages()) biocLite("Biostrings")
 library("Biostrings")
-library("rBLAST")
-# Check if blast is in PATH.
-Sys.which("blastn")
+# CRAN packages
+
+if (!"dplyr" %in% installed.packages()) install.packages("dplyr")
 library("dplyr")
+if (!"taxize" %in% installed.packages()) install.packages("taxize")
 library("taxize")
+if (!"devtools" %in% installed.packages()) install.packages("devtools")
+library("devtools")
+if (!"rBLAST" %in% installed.packages()) install_github("mhahsler/rBLAST")
+library("rBLAST")
+
+# Check if blast is in PATH.
+
+blast_path <- Sys.which("blastn")
+
+as.character(blast_path)[1]
+
+length(blast_path)
+
+if (length(blast_path) > 1) {
+    print("Blast found at:")
+    print(blast_path)
+}else {
+    "Blast not found! Install Blast"
+}
+
+
+
 # set NCBI's entrez api key
 Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
 # Check that key variable is in path.
