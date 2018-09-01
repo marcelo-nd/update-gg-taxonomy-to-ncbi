@@ -1,8 +1,12 @@
 # Install and load required packages
 
 # Bioconductor Packages
-source("http://bioconductor.org/biocLite.R")
-if (!"Biostrings" %in% installed.packages()) biocLite("Biostrings")
+
+if (!"Biostrings" %in% installed.packages()) {
+    source("http://bioconductor.org/biocLite.R")
+    biocLite("Biostrings")
+}
+
 library("Biostrings")
 # CRAN packages
 
@@ -77,7 +81,7 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 # 2) float of blast result's % identity;
 # 3) taxonomy in ncbi's format.
 
-blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100) {
+blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100, microbial_database) {
     # Blasts sequence and return a table of results. Orders it by BITS from greater value.
     blast_result_table <- arrange(predict(microbial_database, seq), desc(Bits))
     # variable to store if we found a sequence with at least percent id value.
@@ -111,111 +115,52 @@ blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100) {
 
 
 
+#### 
 
 
+update_taxonomy_refseq <- function(taxonomy_table, data_fasta, level = spcs, phyl_group = "bacteria", update_all = FALSE, microbial_database_exists = FALSE) {
+    # selecting working percent identity 
+    switch(level,
+            spcs = {
+    # Species level
+    percent = 97
+    },
+            gen = {
+    # Genus level
+    percent = 95
+    },
+            fam = {
+    # Family
+    percent = 90
+    })
 
-
-
-
-# Check if blast is in PATH.
-
-blast_path <- Sys.which("blastn")
-
-blast_path
-
-as.character(blast_path)[1]
-
-length(blast_path)
-
-if (length(blast_path) > 1) {
-    print("Blast found at:")
-    print(blast_path)
-}else {
-    "Blast not found! Install Blast"
-}
-
-
-
-# set NCBI's entrez api key
-Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
-# Check that key variable is in path.
-getkey(service = "entrez")
-
-
-
-
-
-############ Load required data ############
-
-# Extract reference database if not done already.
-download.file("ftp://ftp.ncbi.nlm.nih.gov/blast/db/16SMicrobial.tar.gz", "16SMicrobial.tar.gz", mode = 'wb')
-untar("16SMicrobial.tar.gz", exdir = "16SMicrobialDB")
-# Load reference database.
-microbial_database <- blast(db = "./16SMicrobialDB/16SMicrobial")
-# Check database
-microbial_database
-# Load taxonomy table to be updated with NCBI's taxonomy.
-#tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/hidro_agave_diversidad/2_resultados/9_tsv_gg_sk/taxonomy.tsv", sep = "\t", header = TRUE)
-tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/picrust_analyses_13_8/17_picrust_tsv_gg_13_8/taxonomy.tsv", sep = "\t", header = TRUE)
-tax_table
-# Load sequences to be analyzed. Ids corresponding to taxonomy OTUs.
-data_fasta <- readDNAStringSet("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/picrust_analyses/14_closedRef_forPICRUSt_13_8/dna-sequences.fasta")
-# Check fasta sequences
-data_fasta
-
-# This is the copy of taxonomy file that we are modifying.
-new_tax2 <- tax_table
-new_tax2$Taxon <- as.character(new_tax2$Taxon)
-new_tax2
-
-
-
-
-
-
-
-
-
-
-
-############ MAIN ############
-
-
-update_taxonomy_refseq <- function(current_seq_taxonomy, data_fasta, entrez, level = 97, phyl_group = "bacteria") {
-
-}
-
-for (i in 1:length(data_fasta)) {
-    print(sprintf("OTU: %s / %s", i, length(data_fasta)))
-    # Get current sequence info from fasta file.
-    current_sequence <- data_fasta[i,]
-    # Get the OTU id from fasta file.
-    seq_id <- current_sequence@ranges@NAMES[1]
-    # Get the current taxonomy for current OTU
-    current_seq_taxonomy <- as.character((new_tax2 %>% filter(Feature.ID == seq_id) %>% select(Taxon))[1, 1])
-    # If current taxonomy is incomplete, update
-    if (is_taxonomy_incomplete(current_seq_taxonomy)) {
-        # Blast and get new taxonomy from ncbi
-        new_ncbi_taxonomy = blast_n_get_ncbi_tax(current_sequence, 97)
-        # If ident. perc is above specified.
-        if (new_ncbi_taxonomy[[1]]) {
-            # Replace taxonomy and ident. perc.
-            new_tax2 <- new_tax2 %>% mutate(Confidence = replace(Confidence, which(Feature.ID == seq_id), (new_ncbi_taxonomy[2])))
-            new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[4])))
+    # Iterate over taxonomy table
+    for (otu_entry in taxonomy_table) {
+        # grab taxonomy for each entry. Is a string?!!! ######## CHECK ######
+        current_taxonomy <- as.character(taxonomy_table[otu_entry,] %>% select(Taxon))[1, 1])
+        # If update_all TRUE or if not If current taxonomy is incomplete.
+        if (update_all | is_taxonomy_incomplete(current_seq_taxonomy)) {
+            # get otu_id ######## CHECK ######
+            current_id <- taxonomy_table[otu_entry,] %>% select(Feature.ID))[1, 1])
+            # get otu sequence from fasta file. ######## CHECK ######
+            current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
+            # get new taxonomy
+            new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_bits = 100, microbial_database)
+            # If ident. perc is above specified.
+            if (new_ncbi_taxonomy[[1]]) {
+                # Replace taxonomy and ident. perc.
+                taxonomy_table <- taxonomy_table %>% mutate(Confidence = replace(Confidence, which(Feature.ID == seq_id), (new_ncbi_taxonomy[2])))
+                taxonomy_table <- taxonomy_table %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[4])))
+            }
         }
+        # Wait 0.2 seconds to prevent ncbi's server to explode.
+        Sys.sleep(0.2)
     }
-    # Wait 0.2 seconds to prevent ncbi's server to stop the process.
-    Sys.sleep(0.2)
+    return(taxonomy_table)
 }
 
-new_tax3 <- apply(new_tax2, 2, as.character)
 
-new_tax3
-
-write.table(new_tax3, file = "./taxonomy_updated_picrust_13_8.tsv", sep = "\t", row.names = FALSE)
 
 # To do:
 # Tests for individual functions.
-# Turn main into a function.
-# Add flexibility for choosing the taxonomic level of analyses.
-# if you want to check all
+# fucntion for downldng microbial database
