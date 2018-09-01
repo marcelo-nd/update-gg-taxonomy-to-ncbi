@@ -15,9 +15,106 @@ library("devtools")
 if (!"rBLAST" %in% installed.packages()) install_github("mhahsler/rBLAST")
 library("rBLAST")
 
+
+## Function for determining if original greengenes taxonomy is incomplete.
+## Incomplete is not assigned at specified taxonomic level.
+## Returns boolean TRUE if taxonomy is incomplete.
+
+is_taxonomy_incomplete <- function(taxonomy, level = spcs) {
+    str_splt <- strsplit(taxonomy, ";")
+    switch(level,
+            spcs = {
+            # Species level
+            return(length(str_splt[[1]]) < 7 || length(strsplit(str_splt[[1]][7], "__")[[1]]) < 2)
+            },
+            gen = {
+            # Genus level
+            return(length(str_splt[[1]]) < 6 || length(strsplit(str_splt[[1]][6], "__")[[1]]) < 2)
+            },
+            fam = {
+            # Family
+            return(length(str_splt[[1]]) < 5 || length(strsplit(str_splt[[1]][5], "__")[[1]]) < 2)
+            })
+}
+
+
+### TESTS ###
+#current_string <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae;g__Lactobacillus;s__buchneri"
+#is_taxonomy_incomplete(current_string, "spcs")
+#is_taxonomy_incomplete(current_string, "gen")
+#is_taxonomy_incomplete(current_string, "fam")
+
+#current_string2 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae;g__Lactobacillus;s__"
+#is_taxonomy_incomplete(current_string2, "spcs")
+#is_taxonomy_incomplete(current_string2, "gen")
+#is_taxonomy_incomplete(current_string2, "fam")
+
+#current_string3 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae;g__;s__"
+#is_taxonomy_incomplete(current_string3, "spcs")
+#is_taxonomy_incomplete(current_string3, "gen")
+#is_taxonomy_incomplete(current_string3, "fam")
+
+#current_string4 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae"
+#is_taxonomy_incomplete(current_string4, "spcs")
+#is_taxonomy_incomplete(current_string4, "gen")
+#is_taxonomy_incomplete(current_string4, "fam")
+
+#current_string5 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;"
+#current_string5 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__;g__;s__"
+#current_string5 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales"
+#is_taxonomy_incomplete(current_string5, "spcs")
+#is_taxonomy_incomplete(current_string5, "gen")
+#is_taxonomy_incomplete(current_string5, "fam")
+
+
+############ Function for parsing the NCBI's taxonomy into greegngenes format. Returns string of taxonomy in greengenes format. ############
+
+parse_ncbi_to_gg <- function(ncbi_tax) {
+    return(sprintf("k__%s; p__%s; c__%s; o__%s; f__%s; g__%s; s__%s",
+    # Kingdom
+           filter(ncbi_tax[[1]], rank == "superkingdom")[1, 1],
+    # Phylum
+           filter(ncbi_tax[[1]], rank == "phylum")[1, 1],
+    # Class
+           filter(ncbi_tax[[1]], rank == "class")[1, 1],
+    # Order
+           filter(ncbi_tax[[1]], rank == "order")[1, 1],
+    # Family
+           filter(ncbi_tax[[1]], rank == "family")[1, 1],
+    # Genus
+           filter(ncbi_tax[[1]], rank == "genus")[1, 1],
+    # Species
+           strsplit(filter(ncbi_tax[[1]], rank == "species")[1, 1], " ")[[1]][2]))
+}
+
+
+
+############ Function for blasting sequences against microbial refseq 16s database and returning the taxonomy from NCBI's taxonomy database. ############
+############ Returns vector of size 3 including: bool if % indentity is at least given number, def. 97; float of blast result's % identity; taxonomy in ncbi's format ############
+
+blast_n_get_ncbi_tax <- function(seq, perc_ident = 97) {
+    blast_result <- arrange(predict(microbial_database, seq), desc(Bits), desc(Perc.Ident))[1,]
+    return(c((blast_result["Perc.Ident"] >= perc_ident), (blast_result["Perc.Ident"]), (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]), db = "ncbi"))))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Check if blast is in PATH.
 
 blast_path <- Sys.which("blastn")
+
+blast_path
 
 as.character(blast_path)[1]
 
@@ -64,49 +161,22 @@ new_tax2 <- tax_table
 new_tax2$Taxon <- as.character(new_tax2$Taxon)
 new_tax2
 
-############ Function for determining if original greengenes taxonomy is incomplete. Returns boolean TRUE if taxonomy is incomplete. ############
-
-is_taxonomy_incomplete <- function(taxonomy) {
-    str_splt <- strsplit(taxonomy, ";")
-    # Species level
-    return(length(str_splt[[1]]) < 7 || length(strsplit(str_splt[[1]][7], "__")[[1]]) < 2)
-    # Genus level
-    #return(length(str_splt[[1]]) < 6 || length(strsplit(str_splt[[1]][6], "__")[[1]]) < 2)
-    # Family
-    #return(length(str_splt[[1]]) < 5 || length(strsplit(str_splt[[1]][5], "__")[[1]]) < 2)
-}
-
-############ Function for parsing the NCBI's taxonomy into greegngenes format. Returns string of taxonomy in greengenes format. ############
-
-parse_ncbi_to_gg <- function(ncbi_tax) {
-    return(sprintf("k__%s; p__%s; c__%s; o__%s; f__%s; g__%s; s__%s",
-           # Kingdom
-           filter(ncbi_tax[[1]], rank == "superkingdom")[1, 1],
-           # Phylum
-           filter(ncbi_tax[[1]], rank == "phylum")[1, 1],
-           # Class
-           filter(ncbi_tax[[1]], rank == "class")[1, 1],
-           # Order
-           filter(ncbi_tax[[1]], rank == "order")[1, 1],
-           # Family
-           filter(ncbi_tax[[1]], rank == "family")[1, 1],
-           # Genus
-           filter(ncbi_tax[[1]], rank == "genus")[1, 1],
-           # Species
-           strsplit(filter(ncbi_tax[[1]], rank == "species")[1, 1], " ")[[1]][2]))
-}
 
 
-############ Function for blasting sequences against microbial refseq 16s database and returning the taxonomy from NCBI's taxonomy database. ############
-############ Returns vector of size 3 including: bool if % indentity is at least given number, def. 97; float of blast result's % identity; taxonomy in ncbi's format ############
 
-blast_n_get_ncbi_tax <- function(seq, perc_ident = 97) {
-    blast_result <- arrange(predict(microbial_database, seq), desc(Bits), desc(Perc.Ident))[1,]
-    return(c((blast_result["Perc.Ident"] >= perc_ident), (blast_result["Perc.Ident"]), (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]), db = "ncbi"))))
-}
+
+
+
+
+
 
 
 ############ MAIN ############
+
+
+update_taxonomy_refseq <- function(current_seq_taxonomy, data_fasta, entrez, level = 97, phyl_group = "bacteria") {
+
+}
 
 for (i in 1:length(data_fasta)) {
     print(sprintf("OTU: %s / %s", i, length(data_fasta)))
@@ -141,3 +211,4 @@ write.table(new_tax3, file = "./taxonomy_updated_picrust_13_8.tsv", sep = "\t", 
 # Tests for individual functions.
 # Turn main into a function.
 # Add flexibility for choosing the taxonomic level of analyses.
+# if you want to check all
