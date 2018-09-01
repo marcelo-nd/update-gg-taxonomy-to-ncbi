@@ -16,9 +16,12 @@ if (!"rBLAST" %in% installed.packages()) install_github("mhahsler/rBLAST")
 library("rBLAST")
 
 
-## Function for determining if original greengenes taxonomy is incomplete.
-## Incomplete is not assigned at specified taxonomic level.
-## Returns boolean TRUE if taxonomy is incomplete.
+
+
+
+### Function for determining if original greengenes taxonomy is incomplete.
+# Incomplete is not assigned at specified taxonomic level.
+# Returns boolean TRUE if taxonomy is incomplete.
 
 is_taxonomy_incomplete <- function(taxonomy, level = spcs) {
     str_splt <- strsplit(taxonomy, ";")
@@ -38,36 +41,12 @@ is_taxonomy_incomplete <- function(taxonomy, level = spcs) {
 }
 
 
-### TESTS ###
-#current_string <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae;g__Lactobacillus;s__buchneri"
-#is_taxonomy_incomplete(current_string, "spcs")
-#is_taxonomy_incomplete(current_string, "gen")
-#is_taxonomy_incomplete(current_string, "fam")
-
-#current_string2 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae;g__Lactobacillus;s__"
-#is_taxonomy_incomplete(current_string2, "spcs")
-#is_taxonomy_incomplete(current_string2, "gen")
-#is_taxonomy_incomplete(current_string2, "fam")
-
-#current_string3 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae;g__;s__"
-#is_taxonomy_incomplete(current_string3, "spcs")
-#is_taxonomy_incomplete(current_string3, "gen")
-#is_taxonomy_incomplete(current_string3, "fam")
-
-#current_string4 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Lactobacillaceae"
-#is_taxonomy_incomplete(current_string4, "spcs")
-#is_taxonomy_incomplete(current_string4, "gen")
-#is_taxonomy_incomplete(current_string4, "fam")
-
-#current_string5 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;"
-#current_string5 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__;g__;s__"
-#current_string5 <- "k__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales"
-#is_taxonomy_incomplete(current_string5, "spcs")
-#is_taxonomy_incomplete(current_string5, "gen")
-#is_taxonomy_incomplete(current_string5, "fam")
 
 
-############ Function for parsing the NCBI's taxonomy into greegngenes format. Returns string of taxonomy in greengenes format. ############
+
+### Function for parsing the NCBI's taxonomy into greengenes format.
+# Returns string of taxonomy in greengenes format.
+# What is NCBI's format?
 
 parse_ncbi_to_gg <- function(ncbi_tax) {
     return(sprintf("k__%s; p__%s; c__%s; o__%s; f__%s; g__%s; s__%s",
@@ -89,16 +68,44 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 
 
 
-############ Function for blasting sequences against microbial refseq 16s database and returning the taxonomy from NCBI's taxonomy database. ############
-############ Returns vector of size 3 including: bool if % indentity is at least given number, def. 97; float of blast result's % identity; taxonomy in ncbi's format ############
 
-blast_n_get_ncbi_tax <- function(seq, perc_ident = 97) {
-    blast_result <- arrange(predict(microbial_database, seq), desc(Bits), desc(Perc.Ident))[1,]
-    return(c((blast_result["Perc.Ident"] >= perc_ident), (blast_result["Perc.Ident"]), (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]), db = "ncbi"))))
+
+### Function for blasting sequences against microbial refseq 16s database and returning the taxonomy from NCBI's taxonomy database.
+# Orders results by bits and percent of identity. Then chooses the first match with identity percent.
+# Returns vector of size 3 including:
+# 1) bool if % indentity is at least given number, def. 97 and bits >= 100;
+# 2) float of blast result's % identity;
+# 3) taxonomy in ncbi's format.
+
+blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100) {
+    # Blasts sequence and return a table of results. Orders it by BITS from greater value.
+    blast_result_table <- arrange(predict(microbial_database, seq), desc(Bits))
+    # variable to store if we found a sequence with at least percent id value.
+    min_percent_found <- FALSE
+    # For each row of the results table.
+    for (row in 1:nrow(blast_result_table)) {
+        # if current result has a percent id of at least given value.
+        if (blast_result_table[row, ]$Perc.Ident >= perc_ident) {
+            # set to true as we found a seq with at least given percent of id.
+            min_percent_found <- TRUE
+            # make current row the blast result.
+            blast_result <- blast_result_table[row,]
+            break
+        }
+    }
+    # if we didnt found a seq with at least given perc. id.
+    if (min_percent_found == FALSE) {
+        # result with higher bits value is chosen.
+        blast_result <- blast_result_table[1,]
+    }
+    # Return our results vector. 
+    return(c(
+           ((blast_result["Perc.Ident"] >= perc_ident) & (blast_result["Bits"] >= min_bits)),
+           (blast_result["Perc.Ident"]),
+           (blast_result["Bits"]),
+           # Grab taxonomy from ncbi taxonomy server
+           (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]),db = "ncbi"))))
 }
-
-
-
 
 
 
@@ -194,7 +201,7 @@ for (i in 1:length(data_fasta)) {
         if (new_ncbi_taxonomy[[1]]) {
             # Replace taxonomy and ident. perc.
             new_tax2 <- new_tax2 %>% mutate(Confidence = replace(Confidence, which(Feature.ID == seq_id), (new_ncbi_taxonomy[2])))
-            new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[3])))
+            new_tax2 <- new_tax2 %>% mutate(Taxon = replace(Taxon, which(Feature.ID == seq_id), parse_ncbi_to_gg(new_ncbi_taxonomy[4])))
         }
     }
     # Wait 0.2 seconds to prevent ncbi's server to stop the process.
