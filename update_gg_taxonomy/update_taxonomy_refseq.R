@@ -113,8 +113,6 @@ blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100, microbial
 
 
 
-
-
 #### 
 
 
@@ -137,11 +135,11 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, level = spcs, phy
     # Iterate over taxonomy table
     for (otu_entry in taxonomy_table) {
         # grab taxonomy for each entry. Is a string?!!! ######## CHECK ######
-        current_taxonomy <- as.character(taxonomy_table[otu_entry,] %>% select(Taxon))[1, 1])
+        current_taxonomy <- as.character(taxonomy_table[otu_entry,] %>% select(Taxon)[1, 1])
         # If update_all TRUE or if not If current taxonomy is incomplete.
         if (update_all | is_taxonomy_incomplete(current_seq_taxonomy)) {
             # get otu_id ######## CHECK ######
-            current_id <- taxonomy_table[otu_entry,] %>% select(Feature.ID))[1, 1])
+            current_id <- taxonomy_table[otu_entry,] %>% select(Feature.ID)[1, 1]
             # get otu sequence from fasta file. ######## CHECK ######
             current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
             # get new taxonomy
@@ -162,5 +160,4 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, level = spcs, phy
 
 
 # To do:
-# Tests for individual functions.
 # fucntion for downldng microbial database
