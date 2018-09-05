@@ -39,16 +39,23 @@ head(fungi_fasta)
 fungi_fasta[1,]
 
 
-fungi_old_tax <- read.table("./fungi_analysis/taxonomy.tsv", sep = "\t", header = FALSE)
+fungi_old_tax <- read.table("./data_for_tests/fungi_analysis/taxonomy.tsv", sep = "\t", header = FALSE)
 
 head(fungi_old_tax)
 
+typeof(fungi_old_tax)
 
 head(predict(fungi_database, fungi_fasta[1,]))
 
 new_tax <- fungi_old_tax
 new_tax$V2 <- as.character(new_tax$V2)
 head(new_tax)
+
+typeof(new_tax)
+
+algo <- new_tax %>% filter(V1 == "fc940860f3d7e81bf00eb78712d53eba004fd8a0") %>% select(V2)[1, 1]
+
+select(algo, V2)[1, 1]
 
 is_taxonomy_incomplete <- function(taxonomy) {
     str_splt <- strsplit(taxonomy, ";")
