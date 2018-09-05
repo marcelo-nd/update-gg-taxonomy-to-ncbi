@@ -114,6 +114,18 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 
 
 ### Funtion for downloading the required database.
+get_database <- function(phyl_group = "bacteria", path = ".") {
+    # If database folder does not exist
+    if (!file.exists(paste0(path, "/16SMicrobialDB/16SMicrobial.nhr"))) {
+        # Download database.
+        print("Dowloading database")
+        download.file("ftp://ftp.ncbi.nlm.nih.gov/blast/db/16SMicrobial.tar.gz", paste0(path, "/16SMicrobial.tar.gz"), mode = 'wb')
+        # Extract reference database.
+        untar(paste0(path, "/16SMicrobial.tar.gz"), exdir = paste0(path, "16SMicrobialDB"))
+    }
+    # return database
+    return(blast(db = paste0(path, "/16SMicrobialDB/16SMicrobial")))
+}
 
 
 
@@ -130,7 +142,9 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 # Returns a dataframe with the updated taxonomy using the same layout as the original input.
 # Dataframe can be writen to tsv format to use with QIIME2.
 
-update_taxonomy_refseq <- function(taxonomy_table, data_fasta, level = "spcs", phyl_group = "bacteria", update_all = FALSE) {
+update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_database, level = "spcs", phyl_group = "bacteria", update_all = FALSE) {
+    taxonomy_table$Taxon <- as.character(taxonomy_table$Taxon)
+    taxonomy_table <- as.data.frame(apply(taxonomy_table, 2, as.character), stringsAsFactors = FALSE)
     # selecting working percent identity 
     switch(level,
             spcs = {
@@ -145,6 +159,7 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, level = "spcs", p
     # Family
     percent = 90
     })
+
     # Iterate over taxonomy table
     for (otu_entry in 1:nrow(taxonomy_table)) {
         print(sprintf("OTU: %s / %s", otu_entry, nrow(taxonomy_table)))
@@ -177,14 +192,6 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, level = "spcs", p
 ####
 
 # To do:
-# fucntion for downldng microbial database
-# selection of fungo and bacteria
+# selection of fungi and bacteria
 # merge fungi and bacteria scripts
-
-## Extract reference database if not done already.
-#download.file("ftp://ftp.ncbi.nlm.nih.gov/blast/db/16SMicrobial.tar.gz", "./data_for_tests/16SMicrobial.tar.gz", mode = 'wb')
-#untar("./data_for_tests/16SMicrobial.tar.gz", exdir = "./data_for_tests/16SMicrobialDB")
-## Load reference database.
-#microbial_database <- blast(db = "./data_for_tests/16SMicrobialDB/16SMicrobial")
-## Check database
-#microbial_database
+# if all still keep original if nothign better came up

@@ -42,7 +42,7 @@ is_taxonomy_incomplete(current_string5, "fam")
 data_fasta <- readDNAStringSet("./data_for_tests/bacteria_dna_sequences.fasta")
 
 # Reading microbial data base for tests
-microbial_database <- blast(db = "./data_for_tests/16SMicrobialDB/16SMicrobial")
+bacteria_database <- get_database(phyl_group = "bacteria", path = "./data_for_tests")
 
 # set NCBI's entrez api key
 Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
@@ -74,13 +74,13 @@ fasta2
 fasta3 <- data_fasta[30,]
 fasta3
 
-ref_seq_taxonomy1 <- blast_n_get_ncbi_tax(fasta1, microbial_database = microbial_database)
+ref_seq_taxonomy1 <- blast_n_get_ncbi_tax(fasta1, microbial_database = bacteria_database)
 ref_seq_taxonomy1
 
-ref_seq_taxonomy2 <- blast_n_get_ncbi_tax(fasta2, microbial_database = microbial_database)
+ref_seq_taxonomy2 <- blast_n_get_ncbi_tax(fasta2, microbial_database = bacteria_database)
 ref_seq_taxonomy2
 
-ref_seq_taxonomy3 <- blast_n_get_ncbi_tax(fasta3, microbial_database = microbial_database)
+ref_seq_taxonomy3 <- blast_n_get_ncbi_tax(fasta3, microbial_database = bacteria_database)
 ref_seq_taxonomy3
 
 
@@ -114,7 +114,6 @@ parse_ncbi_to_gg(ref_seq_taxonomy3[4])
 # Load taxonomy table to be updated with NCBI's taxonomy.
 #tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/hidro_agave_diversidad/2_resultados/9_tsv_gg_sk/taxonomy.tsv", sep = "\t", header = TRUE)
 bacteria_tax_table <- read.table("./data_for_tests/bacteria_taxonomy.tsv", sep = "\t", header = TRUE)
-bacteria_tax_table
 
 # Load sequences to be analyzed in fasta format. Ids corresponding to taxonomy OTUs.
 bacteria_data_fasta <- readDNAStringSet("./data_for_tests/bacteria_dna_sequences.fasta")
@@ -122,8 +121,7 @@ bacteria_data_fasta <- readDNAStringSet("./data_for_tests/bacteria_dna_sequences
 bacteria_data_fasta
 
 # Reading microbial data base for tests
-microbial_database <- blast(db = "./data_for_tests/16SMicrobialDB/16SMicrobial")
-microbial_database
+bacteria_database <- get_database(phyl_group = "bacteria", path = "./data_for_tests")
 
 # set NCBI's entrez api key
 Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
@@ -132,13 +130,25 @@ getkey(service = "entrez")
 # Check if blast is in PATH.
 Sys.which("blastn")
 
+head(bacteria_tax_table)
+
+tax_table_updated <- update_taxonomy_refseq(taxonomy_table = bacteria_tax_table, microbial_database = bacteria_database, data_fasta = bacteria_data_fasta, level = "spcs", phyl_group = "bacteria", update_all = FALSE)
+
+head(tax_table_updated)
+
+write.table(new_tax3, file = "./taxonomy_updated_picrust_13_8.tsv", sep = "\t", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
 
 # This is the copy of taxonomy file that we are modifying.
-head(bacteria_tax_table)
-bacteria_tax_table$Taxon <- as.character(bacteria_tax_table$Taxon)
-head(bacteria_tax_table)
-bacteria_tax_table <- as.data.frame(apply(bacteria_tax_table, 2, as.character), stringsAsFactors = FALSE)
-head(bacteria_tax_table)
 
 select(bacteria_tax_table, Taxon)
 
@@ -153,10 +163,8 @@ nrow(bacteria_tax_table)
 
 typeof(bacteria_tax_table)
 
-tax_table_updated <- update_taxonomy_refseq(taxonomy_table = bacteria_tax_table, data_fasta = bacteria_data_fasta, level = "spcs", phyl_group = "bacteria", update_all = FALSE)
+
 
 head(tax_table_updated)
-
-write.table(new_tax3, file = "./taxonomy_updated_picrust_13_8.tsv", sep = "\t", row.names = FALSE)
 
 
