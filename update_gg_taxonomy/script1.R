@@ -1,61 +1,17 @@
-############ Install required packages ############
-
-source("http://bioconductor.org/biocLite.R")
-biocLite("Biostrings")
-install.packages("devtools")
-install.packages("dplyr")
-install.packages("taxize")
-library("devtools")
-install_github("mhahsler/rBLAST")
-
-
-############ Load required packages ############
-
-library("Biostrings")
-library("rBLAST")
-# Check if blast is in PATH.
-Sys.which("blastn")
-library("dplyr")
-library("taxize")
-# set NCBI's entrez api key
-Sys.setenv(ENTREZ_KEY = "f18e3d3d1fbc5ef9bc12875a6f0426422d08")
-# Check that key variable is in path.
-getkey(service = "entrez")
-
-
-
-##############################################################################################
-
-
 
 fungi_database <- blast(db = "./fungi_analysis/fungi.ITS.fna/fungi.ITS.fna")
-
-fungi_database
 
 
 fungi_fasta <- readDNAStringSet("./fungi_analysis/dna-sequences.fasta")
 
-head(fungi_fasta)
-fungi_fasta[1,]
-
-
 fungi_old_tax <- read.table("./data_for_tests/fungi_analysis/taxonomy.tsv", sep = "\t", header = FALSE)
 
-head(fungi_old_tax)
-
-typeof(fungi_old_tax)
-
-head(predict(fungi_database, fungi_fasta[1,]))
 
 new_tax <- fungi_old_tax
 new_tax$V2 <- as.character(new_tax$V2)
 head(new_tax)
 
-typeof(new_tax)
 
-algo <- new_tax %>% filter(V1 == "fc940860f3d7e81bf00eb78712d53eba004fd8a0") %>% select(V2)[1, 1]
-
-select(algo, V2)[1, 1]
 
 is_taxonomy_incomplete <- function(taxonomy) {
     str_splt <- strsplit(taxonomy, ";")

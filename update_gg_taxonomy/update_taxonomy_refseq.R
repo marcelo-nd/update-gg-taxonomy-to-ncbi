@@ -115,14 +115,22 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 
 ### Funtion for downloading the required database.
 get_database <- function(phyl_group = "bacteria", path = ".") {
+
     # If database folder does not exist
-    if (!file.exists(paste0(path, "/16SMicrobialDB/16SMicrobial.nhr"))) {
+    if (!file.exists(paste0(path, "/16SMicrobialDB/16SMicrobial.nhr")) & phyl_group == "bacteria") {
         # Download database.
         print("Dowloading database")
         download.file("ftp://ftp.ncbi.nlm.nih.gov/blast/db/16SMicrobial.tar.gz", paste0(path, "/16SMicrobial.tar.gz"), mode = 'wb')
         # Extract reference database.
-        untar(paste0(path, "/16SMicrobial.tar.gz"), exdir = paste0(path, "16SMicrobialDB"))
+        untar(paste0(path, "/16SMicrobial.tar.gz"), exdir = paste0(path, "/16SMicrobialDB"))
     }
+    else if (!file.exists(paste0(path, "/fungi.ITS.fna/fungi.ITS.fna.nhr")) & phyl_group == "fungi") {
+        print("Dowloading database")
+        download.file("ftp://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.gbff.gz", paste0(path, "/16SMicrobial.tar.gz"), mode = 'wb')
+        untar(paste0(path, "/16SMicrobial.tar.gz"), exdir = paste0(path, "16SMicrobialDB"))
+        # falta blastear
+    }
+
     # return database
     return(blast(db = paste0(path, "/16SMicrobialDB/16SMicrobial")))
 }
@@ -169,18 +177,29 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
         current_taxonomy <- as.character((bacteria_tax_table %>% filter(Feature.ID == otu_entry) %>% select(Taxon))[1, 1])
         # If update_all TRUE or if not If current taxonomy is incomplete.
         if (update_all | is_taxonomy_incomplete(current_taxonomy)) {
-            # get otu_id ######## CHECK ######
-            current_id <- select(taxonomy_table[otu_entry,], Feature.ID)[1, 1]
-            # get otu sequence from fasta file. ######## CHECK ######
-            current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
-            # get new taxonomy
-            new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_bits = 100, microbial_database)
-            # If ident. perc is above specified.
-            if (new_ncbi_taxonomy[[1]]) {
-                # Replace taxonomy and ident. perc.
-                taxonomy_table <- taxonomy_table %>% mutate(Confidence = replace(Confidence, which(Feature.ID == current_id), (new_ncbi_taxonomy[2])))
-                taxonomy_table <- taxonomy_table %>% mutate(Taxon = replace(Taxon, which(Feature.ID == current_id), parse_ncbi_to_gg(new_ncbi_taxonomy[4])))
-            }
+            tryCatch({
+                    # get otu_id ######## CHECK ######
+                    current_id <- select(taxonomy_table[otu_entry,], Feature.ID)[1, 1]
+                    # get otu sequence from fasta file. ######## CHECK ######
+                    current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
+                    # get new taxonomy
+                    new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_bits = 100, microbial_database)
+                    # If ident. perc is above specified.
+                    if (new_ncbi_taxonomy[[1]]) {
+                        # Replace taxonomy and ident. perc.
+                        taxonomy_table <- taxonomy_table %>% mutate(Confidence = replace(Confidence, which(Feature.ID == current_id), (new_ncbi_taxonomy[2])))
+                        taxonomy_table <- taxonomy_table %>% mutate(Taxon = replace(Taxon, which(Feature.ID == current_id), parse_ncbi_to_gg(new_ncbi_taxonomy[4])))
+                        }
+                    },
+                    error = function(e) {
+                        #message("Here's the original error message:\n")
+                        #message(e)
+                    },
+                    warning = function(e) {
+                        #message("Here's the original error message:\n")
+                        #message(e)
+                    }
+            )            
         }
         # Wait 0.2 seconds to prevent ncbi's server to explode.
         Sys.sleep(0.2)
@@ -192,6 +211,5 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
 ####
 
 # To do:
-# selection of fungi and bacteria
-# merge fungi and bacteria scripts
+# fungi selection
 # if all still keep original if nothign better came up

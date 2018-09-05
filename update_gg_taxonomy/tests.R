@@ -132,39 +132,8 @@ Sys.which("blastn")
 
 head(bacteria_tax_table)
 
-tax_table_updated <- update_taxonomy_refseq(taxonomy_table = bacteria_tax_table, microbial_database = bacteria_database, data_fasta = bacteria_data_fasta, level = "spcs", phyl_group = "bacteria", update_all = FALSE)
+bacteria_tax_table_updated <- update_taxonomy_refseq(taxonomy_table = bacteria_tax_table, microbial_database = bacteria_database, data_fasta = bacteria_data_fasta, level = "spcs", phyl_group = "bacteria", update_all = FALSE)
 
-head(tax_table_updated)
+head(bacteria_tax_table_updated)
 
-write.table(new_tax3, file = "./taxonomy_updated_picrust_13_8.tsv", sep = "\t", row.names = FALSE)
-
-
-
-
-
-
-
-
-
-
-
-# This is the copy of taxonomy file that we are modifying.
-
-select(bacteria_tax_table, Taxon)
-
-bacteria_tax_table[1,]
-
-# este si sirve
-(bacteria_tax_table %>% filter(Feature.ID == "4fdb872697ff4712d1408c2a31c881ef") %>% select(Taxon))[1, 1]
-
-select(bacteria_tax_table[1,], Taxon)[1, 1]
-
-nrow(bacteria_tax_table)
-
-typeof(bacteria_tax_table)
-
-
-
-head(tax_table_updated)
-
-
+write.table(bacteria_tax_table_updated, file = "./data_for_tests/bacteria_taxonomy_updated.tsv", sep = "\t", row.names = FALSE)
