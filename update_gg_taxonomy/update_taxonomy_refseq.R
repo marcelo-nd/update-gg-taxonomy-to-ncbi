@@ -55,9 +55,9 @@ is_taxonomy_incomplete <- function(taxonomy, level = "spcs") {
 # 2) float of blast result's % identity;
 # 3) taxonomy in ncbi's format.
 
-blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100, microbial_database) {
+blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_E = 1e-40, microbial_database) {
     # Blasts sequence and return a table of results. Orders it by BITS from greater value.
-    blast_result_table <- arrange(predict(microbial_database, seq), desc(Bits))
+    blast_result_table <- arrange(predict(microbial_database, seq), E)
     # variable to store if we found a sequence with at least percent id value.
     min_percent_found <- FALSE
     # For each row of the results table.
@@ -78,12 +78,13 @@ blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_bits = 100, microbial
     }
     # Return our results vector. 
     return(c(
-           ((blast_result["Perc.Ident"] >= perc_ident) & (blast_result["Bits"] >= min_bits)),
+           ((blast_result["Perc.Ident"] >= perc_ident) & (blast_result["E"] <= min_E)),
            (blast_result["Perc.Ident"]),
            (blast_result["Bits"]),
            # Grab taxonomy from ncbi taxonomy server
            (classification(genbank2uid(id = blast_result["SubjectID"][1, 1]),db = "ncbi"))))
 }
+
 
 
 
@@ -183,7 +184,7 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
                     # get otu sequence from fasta file. ######## CHECK ######
                     current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
                     # get new taxonomy
-                    new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_bits = 100, microbial_database)
+                    new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_E = 1e-40, microbial_database)
                     # If ident. perc is above specified.
                     if (new_ncbi_taxonomy[[1]]) {
                         # Replace taxonomy and ident. perc.
@@ -204,6 +205,9 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
         # Wait 0.2 seconds to prevent ncbi's server to explode.
         Sys.sleep(0.2)
     }
+
+    taxonomy_table <- apply(taxonomy_table, 2, as.character)
+
     return(taxonomy_table)
 }
 
@@ -212,4 +216,4 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
 
 # To do:
 # fungi selection
-# if all still keep original if nothign better came up
+# off-line taxonomy
