@@ -153,7 +153,9 @@ get_database <- function(phyl_group = "bacteria", path = ".") {
 
 update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_database, level = "spcs", phyl_group = "bacteria", update_all = FALSE) {
     taxonomy_table$Taxon <- as.character(taxonomy_table$Taxon)
-    taxonomy_table <- as.data.frame(apply(taxonomy_table, 2, as.character), stringsAsFactors = FALSE)
+    #taxonomy_table <- as.data.frame(apply(taxonomy_table, 2, as.character), stringsAsFactors = FALSE)
+    #taxonomy_table$Feature.ID <- as.character(taxonomy_table$Feature.ID)
+    #taxonomy_table <- as.data.frame(taxonomy_table, stringsAsFactors = FALSE)
     # selecting working percent identity 
     switch(level,
             spcs = {
