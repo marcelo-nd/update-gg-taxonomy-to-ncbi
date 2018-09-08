@@ -175,7 +175,7 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
         #print("otu_entry")
         #print(otu_entry)
         # grab taxonomy for each entry. Is a string?!!! ######## CHECK ######
-        current_taxonomy <- as.character((bacteria_tax_table %>% filter(Feature.ID == otu_entry) %>% select(Taxon))[1, 1])
+        current_taxonomy <- as.character((taxonomy_table[otu_entry,] %>% select(Taxon))[1, 1])
         # If update_all TRUE or if not If current taxonomy is incomplete.
         if (update_all | is_taxonomy_incomplete(current_taxonomy)) {
             tryCatch({
