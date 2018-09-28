@@ -153,7 +153,9 @@ get_database <- function(phyl_group = "bacteria", path = ".") {
 
 update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_database, level = "spcs", phyl_group = "bacteria", update_all = FALSE) {
     taxonomy_table$Taxon <- as.character(taxonomy_table$Taxon)
-    taxonomy_table <- as.data.frame(apply(taxonomy_table, 2, as.character), stringsAsFactors = FALSE)
+    #taxonomy_table <- as.data.frame(apply(taxonomy_table, 2, as.character), stringsAsFactors = FALSE)
+    #taxonomy_table$Feature.ID <- as.character(taxonomy_table$Feature.ID)
+    #taxonomy_table <- as.data.frame(taxonomy_table, stringsAsFactors = FALSE)
     # selecting working percent identity 
     switch(level,
             spcs = {
@@ -176,6 +178,8 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
         #print(otu_entry)
         # grab taxonomy for each entry. Is a string?!!! ######## CHECK ######
         current_taxonomy <- as.character((taxonomy_table %>% filter(Feature.ID == otu_entry) %>% select(Taxon))[1, 1])
+        # Other way to grab current taxonomy.
+        #current_taxonomy <- as.character((taxonomy_table[otu_entry,] %>% select(Taxon))[1, 1])
         # If update_all TRUE or if not If current taxonomy is incomplete.
         if (update_all | is_taxonomy_incomplete(current_taxonomy)) {
             tryCatch({
