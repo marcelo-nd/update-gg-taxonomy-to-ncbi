@@ -1,3 +1,3 @@
 # update-gg-taxonomy-to-ncbi
 
-Takes greengenes taxonomy files (representative sequences and taxonomy table) from qiime2 and updates it using ncbi microbial refseqs.
+Updates greengenes taxonomy files from qiime2 (representative sequences and taxonomy table) and updates them using ncbi microbial refseqs.
