@@ -32,7 +32,7 @@ library("rBLAST")
 
 
 
-### Funtion for downloading the required database.
+### Function for downloading the required database.
 get_database <- function(phyl_group = "bacteria", path = ".") {
     
     if(phyl_group == "bacteria" & file.exists(paste0(path, "/16S_ribosomal_RNA.tar.gz"))){
@@ -155,7 +155,7 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 
 update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_database, level = "spcs", phyl_group = "bacteria", update_all = FALSE) {
     taxonomy_table$Taxon <- as.character(taxonomy_table$Taxon)
-    
+    # Empty dataframe to store the genbank's otus id and taxonomy
     tax_gb_id <- data.frame(feature_id=character(0), gb_id=character(0), taxonomy=character(0))
     # selecting working percent identity 
     switch(level,
@@ -175,19 +175,14 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
     # Iterate over taxonomy table
     for (otu_entry in 1:nrow(taxonomy_table)) {
         print(sprintf("OTU: %s / %s", otu_entry, nrow(taxonomy_table)))
-        #print(otu_entry)
-        # grab taxonomy for each entry. Is a string?!!! ######## CHECK ######
+        # grab taxonomy for each entry.
         current_taxonomy <- as.character((taxonomy_table %>% filter(Feature.ID == tax_table[otu_entry, 1]) %>% select(Taxon))[1, 1])
-        # Other way to grab current taxonomy.
-        #current_taxonomy <- as.character((taxonomy_table[otu_entry,] %>% select(Taxon))[1, 1])
-        # If update_all TRUE or if not If current taxonomy is incomplete.
+        # If update_all TRUE or if current taxonomy is incomplete.
         if (update_all | is_taxonomy_incomplete(current_taxonomy)) {
-            #print(current_taxonomy)
-            #print(is_taxonomy_incomplete(current_taxonomy))
             tryCatch({
-                    # get otu_id ######## CHECK ######
+                    # get otu_id
                     current_id <- select(taxonomy_table[otu_entry,], Feature.ID)[1, 1]
-                    # get otu sequence from fasta file. ######## CHECK ######
+                    # get otu sequence from fasta file.
                     current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
                     # get new taxonomy
                     new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_E = 1e-40, microbial_database)
@@ -222,5 +217,6 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
 ####
 
 # To do:
-# fungi selection
+# fungi
 # off-line taxonomy
+# improve error handling
