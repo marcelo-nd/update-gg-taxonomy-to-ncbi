@@ -1,4 +1,4 @@
-source("./update_taxonomy_refseq.R")
+source("C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/update_taxonomy_refseq.R")
 
 # TESTS for function is_taxonomy_incomplete
 ### Function for determining if original greengenes taxonomy is incomplete.
@@ -38,11 +38,11 @@ is_taxonomy_incomplete(current_string5, "fam")
 
 # Reading files for next tests
 
-# fasta file
-data_fasta <- readDNAStringSet("./data_for_tests/bacteria_dna_sequences.fasta")
+# Read fasta file. readDNAStringSet is a "biostrings" function
+data_fasta <- readDNAStringSet("C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/data_for_tests/bacteria_dna_sequences.fasta")
 
 # Reading microbial data base for tests
-bacteria_database <- get_database(phyl_group = "bacteria", path = "./data_for_tests")
+bacteria_database <- get_database(phyl_group = "bacteria", path = "C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/data_for_tests")
 
 # set NCBI's entrez api key
 Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
@@ -113,15 +113,15 @@ parse_ncbi_to_gg(ref_seq_taxonomy3[4])
 
 # Load taxonomy table to be updated with NCBI's taxonomy.
 #tax_table <- read.table("C:/Users/marce/AppData/Local/Packages/CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc/LocalState/rootfs/home/chelo/hidro_agave_diversidad/2_resultados/9_tsv_gg_sk/taxonomy.tsv", sep = "\t", header = TRUE)
-bacteria_tax_table <- read.table("./data_for_tests/bacteria_taxonomy.tsv", sep = "\t", header = TRUE)
+bacteria_tax_table <- read.table("C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/data_for_tests/bacteria_taxonomy.tsv", sep = "\t", header = TRUE)
 
 # Load sequences to be analyzed in fasta format. Ids corresponding to taxonomy OTUs.
-bacteria_data_fasta <- readDNAStringSet("./data_for_tests/bacteria_dna_sequences.fasta")
+bacteria_data_fasta <- readDNAStringSet("C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/data_for_tests/bacteria_dna_sequences.fasta")
 # Check fasta sequences
 bacteria_data_fasta
 
 # Reading microbial data base for tests
-bacteria_database <- get_database(phyl_group = "bacteria", path = "./data_for_tests")
+bacteria_database <- get_database(phyl_group = "bacteria", path = "C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/data_for_tests")
 
 # set NCBI's entrez api key
 Sys.setenv(ENTREZ_KEY = "ed4870836e8f61529227d9176a7c4a994c07")
@@ -136,4 +136,4 @@ bacteria_tax_table_updated <- update_taxonomy_refseq(taxonomy_table = bacteria_t
 
 head(bacteria_tax_table_updated)
 
-write.table(bacteria_tax_table_updated, file = "./data_for_tests/bacteria_taxonomy_updated.tsv", sep = "\t", row.names = FALSE)
+write.table(bacteria_tax_table_updated, file = "C:/Users/marce/OneDrive/DiversidadH2/1_scripts/update_gg_taxonomy/data_for_tests/bacteria_taxonomy_updated.tsv", sep = "\t", row.names = FALSE)
