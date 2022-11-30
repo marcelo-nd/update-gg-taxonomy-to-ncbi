@@ -34,9 +34,10 @@ library("rBLAST")
 
 ### Function for downloading the required database.
 get_database <- function(phyl_group = "bacteria", path = ".") {
-    
+    # Check if the desired database ta.gz file exists for the selected microbial group. The file name sometimes changes!
     if(phyl_group == "bacteria" & file.exists(paste0(path, "/16S_ribosomal_RNA.tar.gz"))){
         print("Database compressed file '16S_ribosomal_RNA.tar.gz' already exists")
+      # If the file exists let´s check if it is decompressed. If it is not, let's decompresse it.
         if(!file.exists(paste0(path, "/16SbacteriaDB/16S_ribosomal_RNA.ndb"))){
             print("Extracting database")
             untar(paste0(path, "/16S_ribosomal_RNA.tar.gz"), exdir = paste0(path, "/16SbacteriaDB"))
@@ -87,7 +88,7 @@ is_taxonomy_incomplete <- function(taxonomy, level = "spcs") {
 # 2) float of blast result's % identity;
 # 3) taxonomy in ncbi's format.
 
-blast_n_get_ncbi_tax <- function(seq, perc_ident = 97, min_E = 1e-40, microbial_database) {
+blast_n_get_ncbi_tax_online <- function(seq, perc_ident = 97, min_E = 1e-40, microbial_database) {
     # Blasts sequence and return a table of results. Orders it by BITS from greater value.
     blast_result_table <- arrange(predict(microbial_database, seq), E)
     # variable to store if we found a sequence with at least percent id value.
@@ -154,7 +155,8 @@ parse_ncbi_to_gg <- function(ncbi_tax) {
 # Dataframe can be writen to tsv format to use with QIIME2.
 
 update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_database, level = "spcs", phyl_group = "bacteria", update_all = FALSE) {
-    taxonomy_table$Taxon <- as.character(taxonomy_table$Taxon)
+    
+  taxonomy_table$Taxon <- as.character(taxonomy_table$Taxon)
     # Empty dataframe to store the genbank's otus id and taxonomy
     tax_gb_id <- data.frame(feature_id=character(0), gb_id=character(0), taxonomy=character(0))
     # selecting working percent identity 
@@ -176,7 +178,7 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
     for (otu_entry in 1:nrow(taxonomy_table)) {
         print(sprintf("OTU: %s / %s", otu_entry, nrow(taxonomy_table)))
         # grab taxonomy for each entry.
-        current_taxonomy <- as.character((taxonomy_table %>% filter(Feature.ID == tax_table[otu_entry, 1]) %>% select(Taxon))[1, 1])
+        current_taxonomy <- as.character((taxonomy_table %>% filter(Feature.ID == taxonomy_table[otu_entry, 1]) %>% select(Taxon))[1, 1])
         # If update_all TRUE or if current taxonomy is incomplete.
         if (update_all | is_taxonomy_incomplete(current_taxonomy)) {
             tryCatch({
@@ -185,13 +187,13 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
                     # get otu sequence from fasta file.
                     current_sequence <- data_fasta[data_fasta@ranges@NAMES == current_id]
                     # get new taxonomy
-                    new_ncbi_taxonomy <- blast_n_get_ncbi_tax(seq = current_sequence, perc_ident = percent, min_E = 1e-40, microbial_database)
+                    new_ncbi_taxonomy <- blast_n_get_ncbi_tax_online(seq = current_sequence, perc_ident = percent, min_E = 1e-40, microbial_database)
                     # If ident. perc is above specified.
                     if (new_ncbi_taxonomy[[1]]) {
                         # Replace taxonomy and ident. perc.
                         taxonomy_table <- taxonomy_table %>% mutate(Confidence = replace(Confidence, which(Feature.ID == current_id), (new_ncbi_taxonomy[2])))
                         taxonomy_table <- taxonomy_table %>% mutate(Taxon = replace(Taxon, which(Feature.ID == current_id), parse_ncbi_to_gg(new_ncbi_taxonomy[5])))
-                        tax_gb_id[nrow(tax_gb_id)+1,] <- c(tax_table[otu_entry, 1], new_ncbi_taxonomy[4], parse_ncbi_to_gg(new_ncbi_taxonomy[5]))
+                        tax_gb_id[nrow(tax_gb_id)+1,] <- c(taxonomy_table[otu_entry, 1], new_ncbi_taxonomy[4], parse_ncbi_to_gg(new_ncbi_taxonomy[5]))
                         }
                     },
                     error = function(e) {
@@ -213,7 +215,21 @@ update_taxonomy_refseq <- function(taxonomy_table, data_fasta, microbial_databas
     return(list(taxonomy_table, tax_gb_id))
 }
 
-
+add_strain_to_tax <- function(bacteria_tax_table, id_table){
+  taxonomy_table <- bacteria_tax_table
+  updated_features <- id_table$feature_id
+  for (feature in bacteria_tax_table$Feature.ID) {
+    if (feature %in% updated_features) {
+      print(feature)
+      gb_id <- filter(id_table, feature_id == feature)$gb_id
+      print(gb_id)
+      current_gg_tax <- filter(bacteria_tax_table, Feature.ID == feature)$Taxon
+      print(current_gg_tax)
+      taxonomy_table <- taxonomy_table %>% mutate(Taxon = replace(Taxon, which(Feature.ID == feature), paste(current_gg_tax, "; n__", gb_id)))
+    }
+  }
+  return(taxonomy_table)
+}
 ####
 
 # To do:
